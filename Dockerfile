@@ -33,7 +33,7 @@ RUN uv build --no-build-isolation --verbose --wheel
 RUN mv dist/*/*.whl dist/ 2>/dev/null || true
 
 # List the built wheel
-RUN ls -la dist/
+RUN ls -lh dist/
 
 # Ensure wheel was built
 RUN test -f dist/*.whl || (echo "No wheel found in dist/" && exit 1)
@@ -46,6 +46,9 @@ FROM ${BASE_IMAGE}
 
 # Copy the built wheel from the builder stage
 COPY --from=builder /workspace/flash-attention/dist/*.whl /wheels/
+
+# List copied wheel
+RUN ls -lh /wheels/
 
 # Verify copied wheel size
 RUN [ $(stat -c%s /wheels/*.whl) -gt 10000000 ] || (echo "Copied wheel too small ($(stat -c%s /wheels/*.whl) bytes)" && exit 1)
