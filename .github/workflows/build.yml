@@ -126,6 +126,7 @@ jobs:
         cat > pyproject.toml << EOF
         [project]
         name = "test"
+        version = "0.1.0"
         dependencies = ["torch==${{ env.TORCH_VERSION }}"]
         requires-python = ">=${{ env.PYTHON_VERSION }}"
         EOF
@@ -134,7 +135,6 @@ jobs:
       run: |
         cd test
         uv run python -c "import flash_attn; print('Flash attention import successful')"
-      continue-on-error: true  # Since GPU is needed for full functionality
 
     - name: Check for GPU
       run: |
