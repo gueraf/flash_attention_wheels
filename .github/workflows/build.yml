@@ -57,7 +57,7 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
-        name: Latest Build
+        name: ${{ github.sha }}
         body: |
           Latest wheel from main branch (commit ${{ github.sha }})
 
@@ -96,6 +96,8 @@ jobs:
     steps:
     - name: Download wheel from latest release
       run: gh release download latest --pattern "*.whl" --dir .
+      env:
+        GH_TOKEN: ${{ github.token }}
 
     - name: Set up test project
       run: |
