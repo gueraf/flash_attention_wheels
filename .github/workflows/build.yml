@@ -101,6 +101,19 @@ jobs:
       run: |
         curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin --strip-components=1 uv-x86_64-unknown-linux-gnu/uv
 
+    - name: Get build info
+      run: |
+        BASE_IMAGE=$(awk -F'=' '/^ARG BASE_IMAGE=/ {print $2}' Dockerfile)
+        CUDA_VERSION=$(echo $BASE_IMAGE | sed 's/.*cuda:\([^ -]*\).*/\1/')
+        PYTHON_VERSION=$(awk -F'=' '/^ARG PYTHON_VERSION=/ {print $2}' Dockerfile)
+        TORCH_VERSION=$(awk -F'=' '/^ARG TORCH_VERSION=/ {print $2}' Dockerfile)
+        echo "CUDA_VERSION=$CUDA_VERSION" >> $GITHUB_ENV
+        echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
+        echo "TORCH_VERSION=$TORCH_VERSION" >> $GITHUB_ENV
+        echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        cd flash-attention
+        echo "FLASH_ATTENTION_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
     - name: Download wheel from latest release
       run: gh release download latest --pattern "*.whl" --dir .
       env:
