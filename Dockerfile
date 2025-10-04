@@ -27,7 +27,16 @@ WORKDIR /workspace/flash-attention
 RUN uv pip install torch==${TORCH_VERSION}
 
 # Build the wheel
-RUN uv build --no-build-isolation
+RUN uv build --no-build-isolation --verbose --wheel
+
+# List the built wheel
+RUN ls -la dist/
+
+# Ensure wheel was built
+RUN test -f dist/*.whl || (echo "No wheel found in dist/" && exit 1)
+
+# Check wheel size (should be reasonably large for compiled extensions)
+RUN [ $(stat -c%s dist/*.whl) -gt 10000000 ] || (echo "Wheel too small ($(stat -c%s dist/*.whl) bytes), compilation likely failed" && exit 1)
 
 # Second stage: Clean image with the wheel
 FROM ${BASE_IMAGE}
