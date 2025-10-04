@@ -122,6 +122,7 @@ jobs:
     - name: Set up test project
       run: |
         mkdir test
+        mv *.whl test/
         cd test
         cat > pyproject.toml << EOF
         [project]
@@ -130,6 +131,7 @@ jobs:
         dependencies = ["torch==${{ env.TORCH_VERSION }}"]
         requires-python = ">=${{ env.PYTHON_VERSION }}"
         EOF
+        uv add *.whl
 
     - name: Test import
       run: |
