@@ -136,7 +136,7 @@ jobs:
     - name: Test import
       run: |
         cd test
-        uv run python -c "import flash_attn; print('Flash attention import successful')"
+        uv run python -c "import flash_attn; import inspect; print('Flash attention import successful'); print('Flash attn func signature:', inspect.signature(flash_attn.flash_attn_func))"
 
     - name: Check for GPU
       run: |
