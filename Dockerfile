@@ -1,5 +1,5 @@
 # Use ARG for base image with default
-ARG BASE_IMAGE=nvidia/cuda:12.9.1-devel-ubuntu24.04
+ARG BASE_IMAGE=nvidia/cuda:13.0.1-devel-ubuntu24.04
 
 # First stage: Build the wheel
 FROM ${BASE_IMAGE} AS builder
