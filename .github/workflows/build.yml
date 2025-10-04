@@ -30,6 +30,19 @@ jobs:
         docker cp $CONTAINER_ID:/workspace/flash-attention/dist/. ./dist/
         docker rm $CONTAINER_ID
 
+    - name: Get build info
+      run: |
+        BASE_IMAGE=$(awk -F'=' '/^ARG BASE_IMAGE=/ {print $2}' Dockerfile)
+        CUDA_VERSION=$(echo $BASE_IMAGE | sed 's/.*cuda:\([^ -]*\).*/\1/')
+        PYTHON_VERSION=$(awk -F'=' '/^ARG PYTHON_VERSION=/ {print $2}' Dockerfile)
+        TORCH_VERSION=$(awk -F'=' '/^ARG TORCH_VERSION=/ {print $2}' Dockerfile)
+        echo "CUDA_VERSION=$CUDA_VERSION" >> $GITHUB_ENV
+        echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
+        echo "TORCH_VERSION=$TORCH_VERSION" >> $GITHUB_ENV
+        echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
+        cd flash-attention
+        echo "FLASH_ATTENTION_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
     - name: Upload wheel as artifact
       uses: actions/upload-artifact@v4
       with:
@@ -42,7 +55,15 @@ jobs:
       with:
         tag_name: latest
         name: Latest Build
-        body: Latest wheel from main branch (commit ${{ github.sha }})
+        body: |
+          Latest wheel from main branch (commit ${{ github.sha }})
+
+          **Build Info:**
+          - CUDA Version: ${{ env.CUDA_VERSION }}
+          - Python Version: ${{ env.PYTHON_VERSION }}
+          - Torch Version: ${{ env.TORCH_VERSION }}
+          - Docker Image SHA: ${{ env.COMMIT_SHA }}
+          - Flash Attention Git Hash: ${{ env.FLASH_ATTENTION_SHA }}
         files: dist/*.whl
         draft: false
         prerelease: true
@@ -53,7 +74,15 @@ jobs:
       with:
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
-        body: Wheel for ${{ github.ref_name }}
+        body: |
+          Wheel for ${{ github.ref_name }}
+
+          **Build Info:**
+          - CUDA Version: ${{ env.CUDA_VERSION }}
+          - Python Version: ${{ env.PYTHON_VERSION }}
+          - Torch Version: ${{ env.TORCH_VERSION }}
+          - Docker Image SHA: ${{ env.COMMIT_SHA }}
+          - Flash Attention Git Hash: ${{ env.FLASH_ATTENTION_SHA }}
         files: dist/*.whl
         draft: false
         prerelease: false
