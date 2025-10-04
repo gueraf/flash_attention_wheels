@@ -97,6 +97,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install uv
+      run: |
+        curl -L https://github.com/astral-sh/uv/releases/latest/download/uv-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin --strip-components=1 uv-x86_64-unknown-linux-gnu/uv
+
     - name: Download wheel from latest release
       run: gh release download latest --pattern "*.whl" --dir .
       env:
@@ -109,10 +113,9 @@ jobs:
         cat > pyproject.toml << EOF
         [project]
         name = "test"
-        dependencies = ["torch"]
+        dependencies = ["torch==${{ env.TORCH_VERSION }}"]
+        requires-python = ">=${{ env.PYTHON_VERSION }}"
         EOF
-        uv init
-        uv add ../*.whl
 
     - name: Test import
       run: |
