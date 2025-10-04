@@ -89,3 +89,58 @@ jobs:
         files: dist/*.whl
         draft: false
         prerelease: false
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+    - name: Download wheel from latest release
+      run: gh release download latest --pattern "*.whl" --dir .
+
+    - name: Set up test project
+      run: |
+        mkdir test
+        cd test
+        cat > pyproject.toml << EOF
+        [project]
+        name = "test"
+        dependencies = ["torch"]
+        EOF
+        uv init
+        uv add ../*.whl
+
+    - name: Test import
+      run: |
+        cd test
+        uv run python -c "import flash_attn; print('Flash attention import successful')"
+      continue-on-error: true  # Since GPU is needed for full functionality
+
+    - name: Check for GPU
+      run: |
+        if command -v nvidia-smi &> /dev/null && nvidia-smi &> /dev/null; then
+          echo "GPU_AVAILABLE=true" >> $GITHUB_ENV
+        else
+          echo "GPU_AVAILABLE=false" >> $GITHUB_ENV
+        fi
+
+    - name: Run GPU test
+      if: env.GPU_AVAILABLE == 'true'
+      run: |
+        cd test
+        uv run python -c "
+        import torch
+        print('Torch CUDA available:', torch.cuda.is_available())
+        if torch.cuda.is_available():
+          import flash_attn
+          print('Flash attention GPU import successful')
+          # Basic functional test
+          batch_size, seqlen, nheads, headdim = 1, 64, 8, 64
+          q = torch.randn(batch_size, seqlen, nheads, headdim, device='cuda')
+          k = torch.randn(batch_size, seqlen, nheads, headdim, device='cuda')
+          v = torch.randn(batch_size, seqlen, nheads, headdim, device='cuda')
+          out = flash_attn.flash_attn_func(q, k, v, dropout_p=0.0, causal=False)
+          print('Flash attention function ran successfully on random data')
+          print('Output shape:', out.shape)
+        else:
+          print('CUDA not available')
+        "
