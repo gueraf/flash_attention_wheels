@@ -94,6 +94,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Download wheel from latest release
       run: gh release download latest --pattern "*.whl" --dir .
       env:
