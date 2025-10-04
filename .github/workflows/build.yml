@@ -21,7 +21,7 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build -t flash-attention-builder .
+        docker build --target builder -t flash-attention-builder .
 
     - name: Create container and extract wheel
       run: |

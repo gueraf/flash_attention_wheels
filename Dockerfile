@@ -29,6 +29,9 @@ RUN uv pip install torch==${TORCH_VERSION}
 # Build the wheel
 RUN uv build --no-build-isolation --verbose --wheel
 
+# Move wheel to dist root
+RUN mv dist/*/*.whl dist/ 2>/dev/null || true
+
 # List the built wheel
 RUN ls -la dist/
 
@@ -43,3 +46,6 @@ FROM ${BASE_IMAGE}
 
 # Copy the built wheel from the builder stage
 COPY --from=builder /workspace/flash-attention/dist/*.whl /wheels/
+
+# Verify copied wheel size
+RUN [ $(stat -c%s /wheels/*.whl) -gt 10000000 ] || (echo "Copied wheel too small ($(stat -c%s /wheels/*.whl) bytes)" && exit 1)
