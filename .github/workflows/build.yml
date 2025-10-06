@@ -8,15 +8,32 @@ on:
     branches: [ main ]
 
 jobs:
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      python_versions_list: ${{ steps.set-matrix.outputs.python_versions_list }}
+    steps:
+      - id: set-matrix
+        run: |
+          # Define Python versions here - single source of truth
+          cat << 'EOF' > matrix.json
+          {
+            "include": [
+              {"python_version": "3.10", "base_image": "nvidia/cuda:12.9.1-devel-ubuntu22.04"},
+              {"python_version": "3.12", "base_image": "nvidia/cuda:12.9.1-devel-ubuntu24.04"},
+              {"python_version": "3.13", "base_image": "nvidia/cuda:12.9.1-devel-ubuntu24.04"}
+            ]
+          }
+          EOF
+          echo "matrix=$(cat matrix.json | jq -c .)" >> $GITHUB_OUTPUT
+          echo "python_versions_list=$(cat matrix.json | jq -c '[.include[].python_version]' | jq -r 'join(", ")')" >> $GITHUB_OUTPUT
+
   build:
     runs-on: ubuntu-latest
+    needs: config
     strategy:
-      matrix:
-        include:
-          - python_version: "3.10"
-            base_image: "nvidia/cuda:12.9.1-devel-ubuntu22.04"
-          - python_version: "3.12"
-            base_image: "nvidia/cuda:12.9.1-devel-ubuntu24.04"
+      matrix: ${{ fromJson(needs.config.outputs.matrix) }}
     permissions:
       contents: write
       packages: write
@@ -61,7 +78,7 @@ jobs:
 
   release:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [config, build]
     if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
@@ -73,17 +90,12 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Download py3.10 wheel
+    - name: Download all wheels
       uses: actions/download-artifact@v4
       with:
-        name: flash-attention-wheel-py3.10
+        pattern: flash-attention-wheel-py*
         path: wheels
-
-    - name: Download py3.12 wheel
-      uses: actions/download-artifact@v4
-      with:
-        name: flash-attention-wheel-py3.12
-        path: wheels
+        merge-multiple: true
 
     - name: Get build info
       run: |
@@ -104,7 +116,7 @@ jobs:
           **Build Info:**
           - CUDA Version: 12.9.1
           - Torch Version: ${{ env.TORCH_VERSION }}
-          - Supported Python Versions: 3.10, 3.12
+          - Supported Python Versions: ${{ needs.config.outputs.python_versions_list }}
           - Docker Image SHA: ${{ github.sha }}
           - Flash Attention Git Hash: ${{ env.FLASH_ATTENTION_SHA }}
         files: wheels/*.whl
@@ -123,7 +135,7 @@ jobs:
           **Build Info:**
           - CUDA Version: 12.9.1
           - Torch Version: ${{ env.TORCH_VERSION }}
-          - Supported Python Versions: 3.10, 3.12
+          - Supported Python Versions: ${{ needs.config.outputs.python_versions_list }}
           - Docker Image SHA: ${{ github.sha }}
           - Flash Attention Git Hash: ${{ env.FLASH_ATTENTION_SHA }}
         files: wheels/*.whl
