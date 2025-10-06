@@ -144,7 +144,9 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    needs: build
+    needs: [config, build]
+    strategy:
+      matrix: ${{ fromJson(needs.config.outputs.matrix) }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v5
@@ -155,21 +157,16 @@ jobs:
 
     - name: Get build info
       run: |
-        BASE_IMAGE=$(awk -F'=' '/^ARG BASE_IMAGE=/ {print $2}' Dockerfile)
-        CUDA_VERSION=$(echo $BASE_IMAGE | sed 's/.*cuda:\([^ -]*\).*/\1/')
-        PYTHON_VERSION=$(awk -F'=' '/^ARG PYTHON_VERSION=/ {print $2}' Dockerfile)
         TORCH_VERSION=$(awk -F'=' '/^ARG TORCH_VERSION=/ {print $2}' Dockerfile)
-        echo "CUDA_VERSION=$CUDA_VERSION" >> $GITHUB_ENV
-        echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
         echo "TORCH_VERSION=$TORCH_VERSION" >> $GITHUB_ENV
-        echo "COMMIT_SHA=${{ github.sha }}" >> $GITHUB_ENV
         cd flash-attention
         echo "FLASH_ATTENTION_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Download wheel from latest release
-      run: gh release download latest --pattern "*.whl" --dir .
+      run: gh release download latest --pattern "*cp${PYTHON_VERSION/./}*.whl" --dir .
       env:
         GH_TOKEN: ${{ github.token }}
+        PYTHON_VERSION: ${{ matrix.python_version }}
 
     - name: Set up test project
       run: |
@@ -181,7 +178,7 @@ jobs:
         name = "test"
         version = "0.1.0"
         dependencies = ["torch==${{ env.TORCH_VERSION }}"]
-        requires-python = ">=${{ env.PYTHON_VERSION }}"
+        requires-python = "==${{ matrix.python_version }}.*"
         EOF
         uv add *.whl
 
