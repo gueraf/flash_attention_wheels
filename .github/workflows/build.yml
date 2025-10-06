@@ -10,6 +10,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - python_version: "3.10"
+            base_image: "nvidia/cuda:12.9.1-devel-ubuntu22.04"
+          - python_version: "3.12"
+            base_image: "nvidia/cuda:12.9.1-devel-ubuntu24.04"
     permissions:
       contents: write
       packages: write
@@ -25,7 +33,7 @@ jobs:
 
     - name: Build Docker image
       run: |
-        docker build --target builder -t flash-attention-builder .
+        docker build --build-arg PYTHON_VERSION=${{ matrix.python_version }} --build-arg BASE_IMAGE=${{ matrix.base_image }} --target builder -t flash-attention-builder .
 
     - name: Create container and extract wheel
       run: |
@@ -35,9 +43,9 @@ jobs:
 
     - name: Get build info
       run: |
-        BASE_IMAGE=$(awk -F'=' '/^ARG BASE_IMAGE=/ {print $2}' Dockerfile)
+        BASE_IMAGE="${{ matrix.base_image }}"
         CUDA_VERSION=$(echo $BASE_IMAGE | sed 's/.*cuda:\([^ -]*\).*/\1/')
-        PYTHON_VERSION=$(awk -F'=' '/^ARG PYTHON_VERSION=/ {print $2}' Dockerfile)
+        PYTHON_VERSION="${{ matrix.python_version }}"
         TORCH_VERSION=$(awk -F'=' '/^ARG TORCH_VERSION=/ {print $2}' Dockerfile)
         echo "CUDA_VERSION=$CUDA_VERSION" >> $GITHUB_ENV
         echo "PYTHON_VERSION=$PYTHON_VERSION" >> $GITHUB_ENV
@@ -49,44 +57,62 @@ jobs:
     - name: Upload wheel as artifact
       uses: actions/upload-artifact@v4
       with:
-        name: flash-attention-wheel
+        name: flash-attention-wheel-py${{ matrix.python_version }}
         path: dist/*.whl
 
+    - name: Download py3.10 wheel artifact
+      if: github.ref == 'refs/heads/main' && matrix.python_version == '3.12'
+      uses: actions/download-artifact@v4
+      with:
+        name: flash-attention-wheel-py3.10
+        path: wheel-py3.10
+
     - name: Create latest release for main
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && matrix.python_version == '3.12'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
         name: ${{ github.sha }}
         body: |
-          Latest wheel from main branch (commit ${{ github.sha }})
+          Latest wheels from main branch (commit ${{ github.sha }})
 
           **Build Info:**
           - CUDA Version: ${{ env.CUDA_VERSION }}
-          - Python Version: ${{ env.PYTHON_VERSION }}
           - Torch Version: ${{ env.TORCH_VERSION }}
+          - Supported Python Versions: 3.10, 3.12
           - Docker Image SHA: ${{ env.COMMIT_SHA }}
           - Flash Attention Git Hash: ${{ env.FLASH_ATTENTION_SHA }}
-        files: dist/*.whl
+        files: |
+          dist/*.whl
+          wheel-py3.10/*.whl
         draft: false
         prerelease: true
 
+    - name: Download py3.10 wheel artifact (tag)
+      if: startsWith(github.ref, 'refs/tags/') && matrix.python_version == '3.12'
+      uses: actions/download-artifact@v4
+      with:
+        name: flash-attention-wheel-py3.10
+        path: wheel-py3.10
+
     - name: Create release for tag
-      if: startsWith(github.ref, 'refs/tags/')
+      if: startsWith(github.ref, 'refs/tags/') && matrix.python_version == '3.12'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: ${{ github.ref_name }}
         name: Release ${{ github.ref_name }}
         body: |
-          Wheel for ${{ github.ref_name }}
+          Wheels for ${{ github.ref_name }} (commit ${{ github.sha }})
 
           **Build Info:**
           - CUDA Version: ${{ env.CUDA_VERSION }}
-          - Python Version: ${{ env.PYTHON_VERSION }}
           - Torch Version: ${{ env.TORCH_VERSION }}
+          - Supported Python Versions: 3.10, 3.12
           - Docker Image SHA: ${{ env.COMMIT_SHA }}
           - Flash Attention Git Hash: ${{ env.FLASH_ATTENTION_SHA }}
-        files: dist/*.whl
+        files: |
+          dist/*.whl
+          wheel-py3.10/*.whl
         draft: false
         prerelease: false
 
