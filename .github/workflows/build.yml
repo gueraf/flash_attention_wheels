@@ -91,7 +91,7 @@ jobs:
         submodules: recursive
 
     - name: Download all wheels
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         pattern: flash-attention-wheel-py*
         path: wheels
