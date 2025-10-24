@@ -71,7 +71,7 @@ jobs:
         echo "FLASH_ATTENTION_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
 
     - name: Upload wheel as artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v5
       with:
         name: flash-attention-wheel-py${{ matrix.python_version }}
         path: dist/*.whl
@@ -91,7 +91,7 @@ jobs:
         submodules: recursive
 
     - name: Download all wheels
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         pattern: flash-attention-wheel-py*
         path: wheels
