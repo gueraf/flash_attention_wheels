@@ -7,7 +7,7 @@ ARG PYTHON_VERSION=3.12
 ARG TORCH_VERSION=2.9.0
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y python3-psutil python3.9-dev python3.10-dev python3.11-dev python3.12-dev && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y python3-psutil python3.12-dev && rm -rf /var/lib/apt/lists/*
 
 # Copy uv from official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
