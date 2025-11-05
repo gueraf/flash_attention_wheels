@@ -4,7 +4,7 @@ ARG BASE_IMAGE=nvidia/cuda:12.9.1-devel-ubuntu24.04
 # First stage: Build the wheel
 FROM ${BASE_IMAGE} AS builder
 ARG PYTHON_VERSION=3.12
-ARG TORCH_VERSION=2.8.0
+ARG TORCH_VERSION=2.9.0
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y python3-psutil && rm -rf /var/lib/apt/lists/*
